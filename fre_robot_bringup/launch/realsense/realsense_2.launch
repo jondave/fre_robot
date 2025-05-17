@@ -4,13 +4,14 @@
   <arg name="device_type"         default=""/>
   <arg name="json_file_path"      default=""/>
   <arg name="camera"              default="realsense_2"/> <!-- change camera name -->
-  <arg name="tf_prefix"           default="$arg camera"/>
+  <arg name="tf_prefix"           default="camera"/>
   <arg name="external_manager"    default="false"/>
   <arg name="manager"             default="realsense2_camera_manager"/>
   <!--<arg name="base_frame_id"       default="realsense_2_rotated_link" />--> <!-- change tf mount link -->
   <arg name="base_frame_id"       default="realsense_2_link" /> <!-- change tf mount link -->
 
-  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="realsense_2_tf_publisher" args="-0.51 0 0.51 3.14159265 0 0 base_link realsense_2_link" /> x y z yaw pitch roll parent_frame child_frame -->
+  <!-- x y z yaw pitch roll parent_frame child_frame -->
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="realsense_2_tf_publisher" args="-0.51 0 0.51 3.14159265 0 0 base_link realsense_2_link" /> -->
 
   <arg name="output"              default="screen"/>
   <arg name="respawn"             default="false"/>

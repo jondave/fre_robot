@@ -1,0 +1,11 @@
+<launch> 
+    <!-- Navigation -->
+    <!-- AMCL and Map Server -->
+    <!-- <include file="$(find fre_robot_navigation)/launch/amcl_localisation.launch" /> -->
+
+    <!-- SLAM GMapping -->
+    <include file="$(find fre_robot_navigation)/launch/slam_gmapping.launch" />
+
+    <!-- Move Base -->
+    <include file="$(find fre_robot_navigation)/launch/move_base.launch" />
+</launch>

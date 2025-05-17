@@ -84,11 +84,27 @@
 
   #### IMU Orientation Filter ###############################################
 
-  <node pkg="nodelet" type="nodelet" name="ImuFilterNodelet"
+  <!-- <node pkg="nodelet" type="nodelet" name="ImuFilterNodelet"
     args="load imu_filter_madgwick/ImuFilterNodelet imu_manager"
     output="screen">
 
     <param name="use_mag" value="true"/>
+  </node> -->
+
+  <node pkg="nodelet" type="nodelet" name="ImuFilterNodelet" args="load imu_filter_madgwick/ImuFilterNodelet imu_manager" output="screen">
+
+    <param name="use_mag" value="true"/>
+    <param name="publish_tf" value="false"/>
+    <param name="mag_bias_z" value="0.00035"/> <!-- Riseholme --> <!-- 0.00035 or 0.0015 or 0.0008 changes daily -->
+
+    <!-- Place UK -->
+    <!--<param name="mag_bias_x" value="-2.0"/>
+    <param name="mag_bias_y" value="0"/>
+    <param name="mag_bias_z" value="0.0025"/>-->
+
   </node>
+
+  <!-- x y z yaw pitch roll parent_frame child_frame -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="imu_tf_publisher" args="0.0 0.00 0.09 0 0 0 base_link imu_link" />
 
 </launch>

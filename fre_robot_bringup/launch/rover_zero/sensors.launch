@@ -1,0 +1,23 @@
+<launch> 
+    <!-- LIDAR -->
+    <include file="$(find fre_robot_bringup)/launch/lidar/ld19_lidar.launch" />
+
+    <!-- IMU -->    
+    <include file="$(find fre_robot_bringup)/launch/imu/imu.launch" />
+
+    <!-- Realsense Camera -->
+    <include file="$(find fre_robot_bringup)/launch/realsense/realsense_1.launch" />
+
+    <!-- Navigation -->
+    <!-- EFK -->
+    <include file="$(find fre_robot_navigation)/launch/ekf_localisation.launch" />
+    
+    <!-- AMCL and Map Server -->
+    <!-- <include file="$(find fre_robot_navigation)/launch/amcl_localisation.launch" /> -->
+
+    <!-- SLAM GMapping -->
+    <include file="$(find fre_robot_navigation)/launch/slam_gmapping.launch" />
+
+    <!-- Move Base -->
+    <include file="$(find fre_robot_navigation)/launch/move_base.launch" />
+</launch>

@@ -1,0 +1,11 @@
+<launch>
+  <!-- Load a static map -->
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find your_package)/maps/map.yaml"/>
+
+  <!-- AMCL for localization -->
+  <node pkg="amcl" type="amcl" name="amcl" output="screen">
+    <param name="odom_frame_id" value="odom"/>
+    <param name="base_frame_id" value="base_link"/>
+    <param name="scan_topic" value="/scan"/>
+  </node>
+</launch>

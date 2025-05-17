@@ -1,0 +1,25 @@
+<launch> 
+    <node pkg="joy" type="joy_node" name="joy_node">
+        <param name="device" value="/dev/input/js0" />
+        <param name="autorepeat_rate" value="50" />
+    </node>
+
+    <node pkg="teleop_twist_joy" name="teleop_twist_joy" type="teleop_node">
+            <param name="axis_linear" value="1" />
+            <param name="scale_linear" value="1.0" />
+            <param name="scale_linear_turbo" value="1.5" />
+
+            <param name="axis_angular" value="3" />
+            <param name="scale_angular" value="1.0" />
+            <param name="scale_angular_turbo" value="1.5" />
+
+            <param name="enable_button" value="4" />
+            <param name="enable_turbo_button" value="5" />
+    </node>
+
+    <!-- Include the roverrobotics_driver zero2.launch file -->
+    <include file="$(find roverrobotics_driver)/launch/zero2.launch" />
+
+    <!-- Include the description file -->
+    <include file="$(find roverrobotics_description)/launch/description-4wd.launch" />
+</launch>
