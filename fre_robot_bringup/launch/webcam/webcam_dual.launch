@@ -1,0 +1,11 @@
+<launch>
+  <node name="usb_cam_1" pkg="usb_cam" type="usb_cam_node" output="screen" >
+      <rosparam command="load" file="$(find fre_robot_bringup)/config/webcam_params.yaml"/>
+      <param name="video_device" type="string" value="/dev/video4"/>
+  </node>
+
+  <node name="usb_cam_2" pkg="usb_cam" type="usb_cam_node" output="screen" >
+      <rosparam command="load" file="$(find fre_robot_bringup)/config/webcam_params.yaml"/>
+      <param name="video_device" type="string" value="/dev/video0"/>
+  </node>
+</launch>
