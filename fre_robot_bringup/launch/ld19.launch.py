@@ -31,7 +31,7 @@ def generate_launch_description():
       parameters=[
         {'product_name': 'LDLiDAR_LD19'},
         {'topic_name': 'scan'},
-        {'frame_id': 'base_laser'},
+        {'frame_id': 'lidar_link'},
         {'port_name': '/dev/ttyUSB0'},
         {'port_baudrate': 230400},
         {'laser_scan_dir': True},
@@ -41,12 +41,12 @@ def generate_launch_description():
       ]
   )
 
-  # base_link to base_laser tf node
+  # base_link to lidar_link tf node
   base_link_to_laser_tf_node = Node(
     package='tf2_ros',
     executable='static_transform_publisher',
-    name='base_link_to_base_laser_ld19',
-    arguments=['0.19','0.125','0.15','0','0','0','base_link','base_laser']
+    name='base_link_to_lidar_link_ld19',
+    arguments=['0.19','0.125','0.15','0','0','0','base_link','lidar_link']
   )
 
 

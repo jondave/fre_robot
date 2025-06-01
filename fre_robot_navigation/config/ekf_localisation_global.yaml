@@ -1,0 +1,47 @@
+ekf_filter_node:
+  ros__parameters:
+    use_sim_time: false
+    frequency: 30.0
+    sensor_timeout: 0.1
+    two_d_mode: true
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: map
+    map_frame: map
+    publish_tf: true
+
+    # Inputs
+    use_control: false
+    odometry0: "/odometry/wheels"
+    odometry0_config: [true,  true,  false,
+                       false, false, false,
+                       false, false, false,
+                       false, false, false,
+                       false, false, false]
+    odometry0_differential: false
+    odometry0_queue_size: 10
+
+    pose0: /amcl_pose
+    pose0_config: [true, true, false, 
+                  false, false, true,
+                  false, false, false, 
+                  false, false, false,
+                  false, false, false]
+    pose0_differential: false
+    pose0_queue_size: 10
+
+    imu0: "/imu/data_raw"
+    imu0_config: [false, false, false,
+                  true,  true,  false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, false]
+    imu0_differential: false
+    imu0_queue_size: 10
+    imu0_remove_gravitational_acceleration: true
+
+# x_pos,    y_pos,     z_pos
+# roll,     pitch,     yaw
+# x_vel,    y_vel,     z_vel
+# roll_vel, pitch_vel, yaw_vel
+# x_accel,  y_accel,   z_accel

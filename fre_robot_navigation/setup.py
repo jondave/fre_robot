@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+import os
+from glob import glob
 
 package_name = 'fre_robot_navigation'
 
@@ -10,6 +12,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        # Recursively include all launch files
+        (os.path.join('share', package_name, 'launch'), glob('launch/**/*.launch.py', recursive=True)),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -19,7 +23,6 @@ setup(
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': [
-        ],
+        'console_scripts': [],
     },
 )
