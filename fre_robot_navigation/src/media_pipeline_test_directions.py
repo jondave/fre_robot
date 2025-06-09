@@ -46,72 +46,87 @@ def interpret_gesture(pose_landmarks) -> str:
             print(f"DEBUG: Low confidence in these landmarks: {', '.join(low_visibility_landmarks)}")
             return "NO_COMMAND"
 
-        # Define thresholds for gesture detection
-        vertical_threshold = 0.1 # Max difference in Y to consider arm 'straight' horizontally
-        raise_arm_threshold = 0.15 # How much wrist Y should be above shoulder Y to be 'up' (for MOVE_FORWARD)
-        horizontal_arm_spread_factor = 0.2 # How far out wrists should be from shoulders for T-pose/single arm outstretched
+        # --- Define thresholds for gesture detection ---
+        # These values might need adjustment based on camera angle, person's distance, and body proportions.
 
-        neutral_arm_y_threshold = 0.1 # How much wrist Y can be below shoulder Y for neutral
-        neutral_arm_x_threshold = 0.1 # How much wrist X can be away from shoulder X for neutral
+        # How "flat" an arm needs to be to be considered horizontal (wrist/elbow Y close to shoulder Y), lower values more restrictive.
+        vertical_threshold = 0.9
 
-        # Helper checks for horizontal arm position
-        is_left_arm_horizontal = (
+        # How much higher the wrist needs to be than the shoulder for an arm to be considered "up".
+        raise_arm_threshold = 0.15
+
+        # Factor determining how far out wrists should be from shoulders for 'outstretched' gestures (T-pose, single arm out).
+        # Scaled by the distance between the user's shoulders.
+        horizontal_arm_spread_factor = 0.2
+
+        # How much the wrist Y can be below its shoulder Y for an arm to be considered "down" or "neutral".
+        neutral_arm_y_threshold = 0.1
+
+        # How much the wrist X can be away from its shoulder X for an arm to be considered horizontally "neutral" (not outstretched).
+        neutral_arm_x_threshold = 0.1
+
+
+        # --- Helper checks for arm positions relative to shoulders ---
+
+        # Checks if the left arm is horizontally outstretched to YOUR left
+        is_left_arm_outstretched_horizontal = (
+            # 1. Wrist and elbow are vertically aligned with shoulder (horizontal)
             abs(left_wrist.y - left_shoulder.y) < vertical_threshold and
             abs(left_elbow.y - left_shoulder.y) < vertical_threshold and
-            left_wrist.x < (left_shoulder.x - (right_shoulder.x - left_shoulder.x) * horizontal_arm_spread_factor) # Outstretched left
+            # 2. Wrist is horizontally stretched out to the left
+            left_wrist.x < (left_shoulder.x - (right_shoulder.x - left_shoulder.x) * horizontal_arm_spread_factor)
         )
-        is_right_arm_horizontal = (
+        # Checks if the right arm is horizontally outstretched to YOUR right
+        is_right_arm_outstretched_horizontal = (
+            # 1. Wrist and elbow are vertically aligned with shoulder (horizontal)
             abs(right_wrist.y - right_shoulder.y) < vertical_threshold and
             abs(right_elbow.y - right_shoulder.y) < vertical_threshold and
-            right_wrist.x > (right_shoulder.x + (right_shoulder.x - left_shoulder.x) * horizontal_arm_spread_factor) # Outstretched right
+            # 2. Wrist is horizontally stretched out to the right
+            right_wrist.x > (right_shoulder.x + (right_shoulder.x - left_shoulder.x) * horizontal_arm_spread_factor)
         )
         
-        # Helper check for arm being down/neutral
+        # Checks if an arm is generally in a "down" position (wrist significantly below shoulder)
         is_left_arm_down = left_wrist.y > left_shoulder.y + neutral_arm_y_threshold
         is_right_arm_down = right_wrist.y > right_shoulder.y + neutral_arm_y_threshold
 
-
-        # Gesture 1: Both Arms Up -> Go Forward Straight
-        if (left_wrist.y < (left_shoulder.y - raise_arm_threshold) and
-            right_wrist.y < (right_shoulder.y - raise_arm_threshold)):
-            return "MOVE_FORWARD"
-
-        # Gesture 2: Right Arm Horizontal (on screen, your left arm) -> Move Left
-        # Requires the left arm (MediaPipe's LEFT_WRIST) to be horizontal and the right arm to be down
-        elif is_left_arm_horizontal and is_right_arm_down:
-            return "MOVE_LEFT"
-
-        # Gesture 3: Left Arm Horizontal (on screen, your right arm) -> Move Right
-        # Requires the right arm (MediaPipe's RIGHT_WRIST) to be horizontal and the left arm to be down
-        elif is_right_arm_horizontal and is_left_arm_down:
-            return "MOVE_RIGHT"
-
-        # Gesture 4: T-shape (Both arms roughly horizontal and outstretched) -> Stop
-        # This condition already uses the 'horizontal_arm_spread_factor'
-        # We need to make sure this doesn't conflict with single arm horizontal.
-        # The current `arms_outstretched` checks both left_wrist.x and right_wrist.x
-        # and `arms_horizontal_left` and `arms_horizontal_right` are also checking both.
-        # So, the original logic for STOP (requiring BOTH arms to be horizontal and outstretched) is fine.
-        arms_horizontal_left_stop = abs(left_wrist.y - left_shoulder.y) < vertical_threshold and \
-                               abs(left_elbow.y - left_shoulder.y) < vertical_threshold
-        arms_horizontal_right_stop = abs(right_wrist.y - right_shoulder.y) < vertical_threshold and \
-                                abs(right_elbow.y - right_shoulder.y) < vertical_threshold
-
-        arms_outstretched_stop = left_wrist.x < (left_shoulder.x - (right_shoulder.x - left_shoulder.x) * horizontal_arm_spread_factor) and \
-                            right_wrist.x > (right_shoulder.x + (right_shoulder.x - left_shoulder.x) * horizontal_arm_spread_factor)
-
-        if arms_horizontal_left_stop and arms_horizontal_right_stop and arms_outstretched_stop:
-            return "STOP"
-            
-        # Gesture 5: Neutral Pose
+        # Checks if an arm is in a generally "neutral" position (vertically and horizontally close to body)
         is_left_arm_neutral = (left_wrist.y > (left_shoulder.y - neutral_arm_y_threshold) and
                                abs(left_wrist.x - left_shoulder.x) < neutral_arm_x_threshold)
         is_right_arm_neutral = (right_wrist.y > (right_shoulder.y - neutral_arm_y_threshold) and
                                 abs(right_wrist.x - right_shoulder.x) < neutral_arm_x_threshold)
 
-        if is_left_arm_neutral and is_right_arm_neutral:
-            return "NEUTRAL"
 
+        # --- Gesture Recognition Logic (Order matters for precedence) ---
+
+        # Gesture 1: Both Arms Up -> Go Forward Straight
+        # Both wrists are significantly above their respective shoulders.
+        if (left_wrist.y < (left_shoulder.y - raise_arm_threshold) and
+            right_wrist.y < (right_shoulder.y - raise_arm_threshold)):
+            return "MOVE_FORWARD"
+
+        # Gesture 2: Your physical LEFT arm outstretched horizontally -> Move Left
+        # (This arm appears on the right side of the mirrored screen due to cv2.flip(image, 1))
+        # Requires the left arm to be horizontal and outstretched, AND the right arm to be down.
+        elif is_left_arm_outstretched_horizontal and is_right_arm_down:
+            return "MOVE_LEFT"
+
+        # Gesture 3: Your physical RIGHT arm outstretched horizontally -> Move Right
+        # (This arm appears on the left side of the mirrored screen due to cv2.flip(image, 1))
+        # Requires the right arm to be horizontal and outstretched, AND the left arm to be down.
+        elif is_right_arm_outstretched_horizontal and is_left_arm_down:
+            return "MOVE_RIGHT"
+
+        # # Gesture 4: T-shape (Both arms roughly horizontal and outstretched) -> Stop
+        # # Both arms must meet the 'outstretched horizontal' criteria.
+        # if is_left_arm_outstretched_horizontal and is_right_arm_outstretched_horizontal:
+        #     return "STOP"
+            
+        # Gesture 5: Neutral Pose (arms generally down and close to the body)
+        # Both arms must be in a generally neutral position.
+        if is_left_arm_neutral and is_right_arm_neutral:
+            return "STOP"
+
+        # If no specific gesture is detected from the above conditions
         return "NO_COMMAND"
 
     except Exception as e:
@@ -119,7 +134,7 @@ def interpret_gesture(pose_landmarks) -> str:
         return "NO_COMMAND"
 
 
-# --- Main Script (no changes needed here, assuming you're using the latest version) ---
+# --- Main Script (no changes needed here, as the modifications are only in interpret_gesture) ---
 
 cap = cv2.VideoCapture(0)
 
@@ -147,7 +162,7 @@ with mp_pose.Pose(
             time.sleep(0.1)
             continue
 
-        # image = cv2.flip(image, 1) # Keep this for mirror view
+        image = cv2.flip(image, 1) # Keep this for mirror view
 
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_rgb.flags.writeable = False
