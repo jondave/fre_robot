@@ -46,7 +46,7 @@ def generate_launch_description():
     package='tf2_ros',
     executable='static_transform_publisher',
     name='base_link_to_lidar_link_ld19',
-    arguments=['0.19','0.125','0.15','0','0','0','base_link','lidar_link']
+    arguments=['0.19','0.125','0.15','-1.5708','0','0','base_link','lidar_link'] # x, y, z, yaw, pitch, roll, parent frame, child frame
   )
 
 

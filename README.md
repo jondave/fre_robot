@@ -32,7 +32,7 @@ ros2 launch fre_robot_bringup accessories.launch.py
 ### Localisation
 To start local localisation (base_link to odom frame) launch the EKF node, this fuses the wheel odom and IMU data.
 ```
-ros2 launch fre_robot_navigation ekf_localisation_local.py 
+ros2 launch fre_robot_navigation ekf_localisation_local.launch.py
 ```
 
 ### SLAM and Nav2
@@ -40,11 +40,19 @@ ros2 launch fre_robot_navigation ekf_localisation_local.py
 To navigate without a map launch slam toolbox (to build a map) and Nav2.
 ```
 ros2 launch roverrobotics_driver slam_launch.py
-ros2 launch nav2_bringup navigation_launch.py slam:=True
+ros2 launch nav2_bringup navigation_launch.py slam:=True # default params
+
+ros2 launch nav2_bringup navigation_launch.py slam:=True params_file:=/home/mark1/ros2_ws/src/fre_robot/fre_robot_navigation/config/nav2_params.yaml
 ```
 
 To navigate with a saved map launch AMCL with global EKF localisation and map server and Nav2
 ```
 ros2 launch fre_robot_navigation amcl.launch.py 
 ros2 launch nav2_bringup navigation_launch.py
+```
+
+# Task 3
+Launch files
+```
+ros2 launch nav2_bringup navigation_launch.py params_file:=$HOME/rover_workspace/src/roverrobotics_ros2/roverrobotics_driver/config/nav2_params.yaml
 ```

@@ -10,6 +10,19 @@ from action_msgs.msg import GoalStatus
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from rclpy.action.client import ClientGoalHandle
 
+# to run this node, use:
+# ros2 launch fre_robot_bringup zero_teleop.launch.py
+
+# ros2 launch fre_robot_bringup accessories.launch.py
+# ros2 launch  fre_robot_bringup realsense_1.launch.py
+
+# ros2 launch fre_robot_navigation ekf_localisation_local.launch.py
+
+# ros2 launch roverrobotics_driver slam_launch.py
+# ros2 launch nav2_bringup navigation_launch.py
+
+# TODO add fruit_detector_v2.py
+
 class TreeNavigator(Node):
     def __init__(self):
         super().__init__('tree_navigator')
@@ -208,7 +221,7 @@ class TreeNavigator(Node):
 
     def trigger_fruit_detection(self, tree, pose):
         self.get_logger().info(f"Triggering fruit detection at x: {pose.pose.position.x:.2f}, y: {pose.pose.position.y:.2f} for {tree['fruit']} tree.")
-        # TODO: Add your detection logic here
+        # TODO: Add detection logic
 
 def main(args=None):
     rclpy.init(args=args)

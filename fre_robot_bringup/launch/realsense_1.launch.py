@@ -17,9 +17,9 @@ import os
 import yaml
 from launch import LaunchDescription
 import launch_ros.actions
-from launch.actions import DeclareLaunchArgument, OpaqueFunction, Node
+from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
-
 
 configurable_parameters = [{'name': 'camera_name',                  'default': 'camera', 'description': 'camera unique name'},
                            {'name': 'camera_namespace',             'default': 'camera', 'description': 'namespace for camera'},
@@ -100,11 +100,11 @@ def launch_setup(context, params, param_name_suffix=''):
     params_from_file = {} if _config_file == "''" else yaml_to_dict(_config_file)
 
     # Override params
-    params['serial_no'] = '050222071152'
+    # params['serial_no'] = '051122071998' # 050222071152
     params['camera_name'] = 'realsense_1' # camrea base link is camera_name + '_link'
 
     _output = LaunchConfiguration('output' + param_name_suffix)
-    if(os.getenv('ROS_DISTRO') == 'foxy'):
+    if(os.getenv('ROS_DISTRO') == 'foxy'): # This block is for Foxy, error shows Humble
         _output = context.perform_substitution(_output)
 
     realsense_node = launch_ros.actions.Node(
@@ -119,12 +119,12 @@ def launch_setup(context, params, param_name_suffix=''):
     )
 
     # static transform publisher node, replace with your actual values
-    static_tf_node = Node(
+    static_tf_node = launch_ros.actions.Node( # Changed here: use launch_ros.actions.Node
         package='tf2_ros',
         executable='static_transform_publisher',
-        name='static_transform_publisher',
+        name='static_transform_publisher', # It's good practice to give this a unique name if you might launch multiple
         output='screen',
-        arguments=['0.19', '0', '0.15', '0', '0', '0',  # x y z roll pitch yaw
+        arguments=['0.19', '0', '0.15', '0', '0', '0',  # x y z yaw pitch roll (Note: tf static_transform_publisher uses YPR, not RPY for Euler angles if not using quaternions)
                    'base_link', 'realsense_1_link']     # parent frame, child frame
     )
 
