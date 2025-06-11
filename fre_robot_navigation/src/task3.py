@@ -52,15 +52,15 @@ class TreeNavigator(Node):
 
         # Define tree positions
         self.tree_positions = [
-            {'fruit': 'apple', 'x': 2.0, 'y': 2.0},
-            {'fruit': 'lemon', 'x': 5.0, 'y': 1.5},
-            {'fruit': 'banana', 'x': 8.0, 'y': 3.0},
-            {'fruit': 'grapes', 'x': 3.0, 'y': 7.0},
-            {'fruit': 'orange', 'x': 7.5, 'y': 8.0}
+            {'fruit': 'tree_1', 'x': 2.0, 'y': 2.0},
+            {'fruit': 'tree_2', 'x': 5.0, 'y': 1.5},
+            {'fruit': 'tree_3', 'x': 8.0, 'y': 3.0},
+            {'fruit': 'tree_4', 'x': 3.0, 'y': 7.0},
+            {'fruit': 'tree_5', 'x': 7.5, 'y': 8.0}
         ]
 
         self.circle_radius = 0.75
-        self.num_points = 8
+        self.num_points = 3
 
         # State management for mission
         self.paused = True  # Start in paused state

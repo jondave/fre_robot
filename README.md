@@ -56,3 +56,13 @@ Launch files
 ```
 ros2 launch nav2_bringup navigation_launch.py params_file:=$HOME/rover_workspace/src/roverrobotics_ros2/roverrobotics_driver/config/nav2_params.yaml
 ```
+
+Rover driver EKF
+```
+ros2 launch roverrobotics_driver robot_localizer.launch.py
+```
+
+```
+ros2 launch nav2_bringup navigation_launch.py params_file:=$HOME/new_nav2_params.yaml
+```
+

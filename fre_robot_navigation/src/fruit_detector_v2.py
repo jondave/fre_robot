@@ -10,8 +10,8 @@ from ultralytics import YOLO
 import numpy as np
 import csv
 import time
-import pandas as pd # Added for easier CSV handling
-from sklearn.cluster import DBSCAN # Added for DBSCAN clustering
+import pandas as pd
+from sklearn.cluster import DBSCAN
 
 import tf2_ros
 from tf2_ros import TransformException
@@ -60,11 +60,18 @@ class FruitDetectorNode(Node):
         self.camera_intrinsics = None
         self.get_logger().info("Waiting for camera info...")
 
+        # --- Image Saving Setup ---
+        self.image_save_directory = os.path.join(os.path.expanduser('~'), 'fruit_detection_images')
+        os.makedirs(self.image_save_directory, exist_ok=True)
+        self.get_logger().info(f"Saving detected images to: {self.image_save_directory}")
+
         # CSV File Setup
         self.csv_file_path = os.path.join(os.path.expanduser('~'), 'fruit_detections.csv')
+        # Add a new header for the image file path
+        self.csv_header = ['timestamp', 'fruit_type', 'map_x', 'map_y', 'image_filename']
+        
         self.clustered_csv_file_path = os.path.join(os.path.expanduser('~'), 'clustered_fruit_detections.csv')
-        self.csv_header = ['fruit_type', 'map_x', 'map_y']
-        self.clustered_csv_header = ['fruit_type', 'cluster_id', 'map_x', 'map_y']
+        self.clustered_csv_header = ['fruit_type', 'cluster_id', 'map_x', 'map_y', 'representative_image']
         self.initialize_csv()
 
         # Data storage for clustering
@@ -115,7 +122,9 @@ class FruitDetectorNode(Node):
             return
 
         rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
-        detected_cv_image = cv_image.copy()
+        detected_cv_image = cv_image.copy() # Make a copy to draw on
+
+        current_timestamp = time.time()
         
         try:
             transform = self.tf_buffer.lookup_transform(
@@ -147,7 +156,7 @@ class FruitDetectorNode(Node):
                         class_name = CLASS_NAMES[cls_id]
 
                     label = f"{class_name}: {conf:.2f}"
-                    color = (0, 255, 0)
+                    color = (0, 255, 0) # Green color for bounding box
                     cv2.rectangle(detected_cv_image, (x1, y1), (x2, y2), color, 2)
                     cv2.putText(detected_cv_image, label, (x1, y1 - 10 if y1 - 10 > 10 else y1 + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
@@ -179,13 +188,39 @@ class FruitDetectorNode(Node):
                         
                         self.get_logger().info(f"Detected {class_name} at map coordinates: ({map_x:.2f}, {map_y:.2f})")
                         
-                        # Store for clustering later
-                        self.detected_fruit_points.append({'fruit_type': class_name, 'map_x': map_x, 'map_y': map_y})
+                        # --- Save image for this detection ---
+                        # Create a unique filename for the detected image
+                        image_filename = f"{int(current_timestamp * 1000)}_{class_name}_{i}.png"
+                        image_filepath = os.path.join(self.image_save_directory, image_filename)
+                        
+                        # Crop the bounding box area and save it
+                        # Ensure bounding box coordinates are within image bounds
+                        x1_clip = max(0, x1)
+                        y1_clip = max(0, y1)
+                        x2_clip = min(cv_image.shape[1], x2)
+                        y2_clip = min(cv_image.shape[0], y2)
+                        
+                        cropped_image = cv_image[y1_clip:y2_clip, x1_clip:x2_clip]
+                        
+                        if cropped_image.size > 0: # Ensure the cropped image is not empty
+                            cv2.imwrite(image_filepath, cropped_image)
+                            self.get_logger().info(f"Saved cropped detection image: {image_filepath}")
+                        else:
+                            self.get_logger().warn(f"Cropped image for {class_name} at ({x1},{y1})-({x2},{y2}) was empty.")
+                            image_filename = "" # Don't record a filename if image wasn't saved
+
+                        # Store for clustering later (including image_filename)
+                        self.detected_fruit_points.append({
+                            'fruit_type': class_name,
+                            'map_x': map_x,
+                            'map_y': map_y,
+                            'image_filename': image_filename # Store the filename
+                        })
 
                         # Save to raw detections CSV immediately
                         with open(self.csv_file_path, 'a', newline='') as file:
                             writer = csv.writer(file)
-                            writer.writerow([class_name, map_x, map_y])
+                            writer.writerow([current_timestamp, class_name, map_x, map_y, image_filename])
 
                     except TransformException as ex:
                         self.get_logger().error(f"Could not transform point from '{msg.header.frame_id}' to 'map': {ex}")
@@ -193,6 +228,7 @@ class FruitDetectorNode(Node):
             else:
                 self.get_logger().info("No objects detected.")
 
+            # Publish the image with bounding boxes drawn on it
             try:
                 detection_msg = self.bridge.cv2_to_imgmsg(detected_cv_image, encoding='bgr8')
                 self.detection_publisher.publish(detection_msg)
@@ -208,38 +244,41 @@ class FruitDetectorNode(Node):
         self.perform_clustering()
         # Optionally, you can reset the timer or stop it if clustering is a one-time event
         # self.clustering_timer.cancel() # Uncomment to stop the timer after one run
+        # If you want it to run continuously, remove the cancel() and consider clearing self.detected_fruit_points
+        self.detected_fruit_points = [] # Clear points after clustering to avoid re-clustering old data
 
     def perform_clustering(self):
-        """Reads data from CSV, performs DBSCAN clustering, and saves results."""
-        if not os.path.exists(self.csv_file_path) or os.stat(self.csv_file_path).st_size == 0:
-            self.get_logger().warn("No fruit detection data found in CSV for clustering.")
+        """Reads data from `self.detected_fruit_points`, performs DBSCAN clustering, and saves results."""
+        if not self.detected_fruit_points:
+            self.get_logger().warn("No fruit detection data collected for clustering.")
             return
 
         try:
-            # Read all detected points from the CSV
-            df = pd.read_csv(self.csv_file_path)
+            df = pd.DataFrame(self.detected_fruit_points)
             if df.empty:
-                self.get_logger().warn("CSV file is empty, no data to cluster.")
+                self.get_logger().warn("DataFrame is empty, no data to cluster.")
                 return
 
-            clustered_data = []
+            clustered_data_to_save = []
 
             # Iterate through each unique fruit type for clustering
             for fruit_type in df['fruit_type'].unique():
-                fruit_df = df[df['fruit_type'] == fruit_type]
-                # Keep original index to map back to original data if needed
-                points_with_original_index = fruit_df[['map_x', 'map_y']].reset_index()
-                points = points_with_original_index[['map_x', 'map_y']].values
+                fruit_df = df[df['fruit_type'] == fruit_type].copy() # Make a copy to avoid SettingWithCopyWarning
+                points = fruit_df[['map_x', 'map_y']].values
 
-                if len(points) < 1: # DBSCAN needs at least 1 point, but 2 for a cluster beyond noise
+                if len(points) < 1:
                     self.get_logger().info(f"Not enough points to cluster {fruit_type}. Skipping.")
                     continue
-                elif len(points) == 1: # Handle single isolated point as a cluster of size 1
-                    clustered_data.append({
+                elif len(points) == 1:
+                    # For a single point, we consider it a cluster of size 1
+                    # Use .iloc[0] to get the first (and only) row
+                    single_point_data = fruit_df.iloc[0] 
+                    clustered_data_to_save.append({
                         'fruit_type': fruit_type,
-                        'cluster_id': 0, # Assign a default cluster ID
-                        'map_x': points[0][0],
-                        'map_y': points[0][1]
+                        'cluster_id': 0, # Assign a default cluster ID for singletons
+                        'map_x': single_point_data['map_x'],
+                        'map_y': single_point_data['map_y'],
+                        'representative_image': single_point_data['image_filename'] # Use its own image
                     })
                     continue
 
@@ -248,6 +287,7 @@ class FruitDetectorNode(Node):
                 # min_samples: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
                 db = DBSCAN(eps=0.1, min_samples=1).fit(points) # Adjusted min_samples for flexibility
                 labels = db.labels_
+                fruit_df['cluster_id'] = labels # Add cluster IDs to the DataFrame
 
                 unique_labels = set(labels)
                 for k in unique_labels:
@@ -255,34 +295,46 @@ class FruitDetectorNode(Node):
                         self.get_logger().info(f"Skipping noise points for {fruit_type}.")
                         continue
                     
-                    class_member_mask = (labels == k)
-                    cluster_points_raw = points[class_member_mask] # These are numpy arrays of [x, y]
+                    cluster_df = fruit_df[fruit_df['cluster_id'] == k]
                     
-                    self.get_logger().info(f"Found cluster {k} for {fruit_type} with {len(cluster_points_raw)} points.")
+                    self.get_logger().info(f"Found cluster {k} for {fruit_type} with {len(cluster_df)} points.")
 
-                    # Limit to a maximum of 5 points from this cluster
-                    points_to_add = min(len(cluster_points_raw), 5) # Take up to 5 points
+                    # Limit to a maximum of 5 points from this cluster for saving, if desired
+                    # The prompt asks to save "the image with the bounding box to the csv file",
+                    # which implies one image per entry. For a cluster, we need a representative image.
+                    # We'll pick one, e.g., the first valid image, or the one closest to the centroid.
+                    
+                    if not cluster_df.empty:
+                        # Option: Choose a representative image for the cluster
+                        # For simplicity, let's take the image from the first point in the cluster
+                        representative_image_filename = ""
+                        # Find the first non-empty image filename in the cluster
+                        for filename in cluster_df['image_filename']:
+                            if filename: # Check if filename is not empty
+                                representative_image_filename = filename
+                                break
+                        
+                        # Calculate the centroid of the cluster
+                        centroid_x = cluster_df['map_x'].mean()
+                        centroid_y = cluster_df['map_y'].mean()
 
-                    for i in range(points_to_add):
-                        x = cluster_points_raw[i][0]
-                        y = cluster_points_raw[i][1]
-                        clustered_data.append({
+                        clustered_data_to_save.append({
                             'fruit_type': fruit_type,
                             'cluster_id': k,
-                            'map_x': x,
-                            'map_y': y
+                            'map_x': centroid_x, # Save centroid for cluster
+                            'map_y': centroid_y, # Save centroid for cluster
+                            'representative_image': representative_image_filename
                         })
-                        self.get_logger().info(f"Adding point from cluster {k} for {fruit_type}: ({x:.2f}, {y:.2f})")
+                        self.get_logger().info(f"Added cluster {k} for {fruit_type} at centroid: ({centroid_x:.2f}, {centroid_y:.2f}) with image: {representative_image_filename}")
             
             # Save the clustered data to a new CSV
-            if clustered_data:
+            if clustered_data_to_save:
                 # Use 'w' mode to overwrite previous clustered data if the timer runs multiple times
-                # If you want to append across multiple clustering runs, change 'w' to 'a' and handle headers carefully
                 with open(self.clustered_csv_file_path, 'w', newline='') as file:
                     writer = csv.writer(file)
                     writer.writerow(self.clustered_csv_header) # Write header only once
-                    for row_data in clustered_data:
-                        writer.writerow([row_data['fruit_type'], row_data['cluster_id'], row_data['map_x'], row_data['map_y']])
+                    for row_data in clustered_data_to_save:
+                        writer.writerow([row_data['fruit_type'], row_data['cluster_id'], row_data['map_x'], row_data['map_y'], row_data['representative_image']])
                 self.get_logger().info(f"Clustered fruit detections saved to: {self.clustered_csv_file_path}")
             else:
                 self.get_logger().warn("No clusters formed or no data to save after filtering.")
