@@ -153,7 +153,7 @@ class FruitDetectorNode(Node):
             # For real deployment, revert to 180.0 seconds (3 minutes).
             if self.detection_timer is not None:
                 self.detection_timer.cancel() # Cancel existing timer if any
-            self.detection_timer = self.create_timer(10.0, self.timer_callback)
+            self.detection_timer = self.create_timer(5.0, self.timer_callback)
             self.get_logger().info("Detection timer started for 10 seconds (for testing).")
             # For production: self.detection_timer = self.create_timer(180.0, self.timer_callback)
 
@@ -272,7 +272,7 @@ class FruitDetectorNode(Node):
                         
                         # --- Save cropped image for this specific detection ---
                         # Create a unique filename for the cropped detected image
-                        image_filename = f"{int(current_timestamp * 1000)}_{class_name}_{i}.png"
+                        image_filename = f"{map_x:.2f}_{map_y:.2f}_{class_name}_{i}.png"
                         image_filepath = os.path.join(self.image_save_directory, image_filename)
                         
                         # Clip bounding box coordinates to ensure they are within image bounds
@@ -295,7 +295,7 @@ class FruitDetectorNode(Node):
                         # Save to raw detections CSV file immediately
                         with open(self.csv_file_path, 'a', newline='') as file:
                             writer = csv.writer(file)
-                            writer.writerow([current_timestamp, class_name, map_x, map_y, image_filename])
+                            writer.writerow([class_name, map_x, map_y, image_filename])
 
                     except TransformException as ex:
                         self.get_logger().error(f"Could not transform point from '{msg.header.frame_id}' to 'map': {ex}")
@@ -340,7 +340,7 @@ class TreeNavigator(Node):
             '/initialpose',
             QoSProfile(depth=10, reliability=QoSReliabilityPolicy.RELIABLE, history=QoSHistoryPolicy.KEEP_LAST)
         )
-        self.publish_initial_pose(1.0, 1.0, 0.0) # Publish an initial pose for the robot
+        # self.publish_initial_pose(1.0, 1.0, 0.0) # Publish an initial pose for the robot
 
         # Subscribe to joystick topic for pause/resume functionality
         self.joy_sub = self.create_subscription(
@@ -359,14 +359,14 @@ class TreeNavigator(Node):
 
         # Define pre-programmed tree positions the robot will visit
         self.tree_positions = [
-            {'fruit': 'tree_1', 'x': 2.0, 'y': 2.0},
-            {'fruit': 'tree_2', 'x': 5.0, 'y': 1.5},
-            {'fruit': 'tree_3', 'x': 8.0, 'y': 3.0},
-            {'fruit': 'tree_4', 'x': 3.0, 'y': 7.0},
-            {'fruit': 'tree_5', 'x': 7.5, 'y': 8.0}
+            {'fruit': 'tree_1', 'x': 3.0, 'y': 3.2},
+            {'fruit': 'tree_2', 'x': 2.0, 'y': 6.85},
+            {'fruit': 'tree_3', 'x': 4.75, 'y': 6.2},
+            {'fruit': 'tree_4', 'x': 7.6, 'y': 2.15},
+            {'fruit': 'tree_5', 'x': 8.0, 'y': 7.15}
         ]
 
-        self.circle_radius = 0.75 # Radius of the circle around each tree for waypoints
+        self.circle_radius = 0.5 # Radius of the circle around each tree for waypoints
         self.num_points = 3 # Number of waypoints to generate around each tree
 
         # State management flags for the mission

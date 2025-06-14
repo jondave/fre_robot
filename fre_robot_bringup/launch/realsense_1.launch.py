@@ -102,6 +102,7 @@ def launch_setup(context, params, param_name_suffix=''):
     # Override params
     # params['serial_no'] = '051122071998' # 050222071152
     params['camera_name'] = 'realsense_1' # camrea base link is camera_name + '_link'
+    params['align_depth.enable'] = 'true'
 
     _output = LaunchConfiguration('output' + param_name_suffix)
     if(os.getenv('ROS_DISTRO') == 'foxy'): # This block is for Foxy, error shows Humble
